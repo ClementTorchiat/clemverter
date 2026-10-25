@@ -2,8 +2,20 @@
 <html lang="fr" data-theme="light">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-light.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Sync theme and favicon with localStorage immediately -->
+    <script>
+      (function() {
+        const theme = localStorage.getItem('clemverter_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        const link = document.querySelector("link[rel~='icon']");
+        if (link) {
+          link.href = theme === 'dark' ? '/favicon-dark.svg' : '/favicon-light.svg';
+        }
+      })();
+    </script>
     
     <!-- Primary Meta Tags -->
     <title>clemverter — Convertisseur & Compresseur d'images Cozy & Illimité</title>

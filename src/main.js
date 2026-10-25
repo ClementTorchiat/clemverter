@@ -11,6 +11,7 @@ import { convertImage, processBatchQueue } from './engine/converter.js';
 import { COMPRESSION_PRESETS, compressImage } from './engine/compressor.js';
 import { exportBatchAsZip, downloadSingleFile } from './engine/zipExport.js';
 import { lofiAudio } from './engine/lofiAudio.js';
+import { renderCustomSelect, initCustomSelects } from './components/customSelect.js';
 
 // Application State
 const state = {
@@ -47,8 +48,28 @@ const state = {
   }
 };
 
-// Apply initial theme
+/**
+ * Update favicon dynamically to match the current theme
+ */
+function updateFavicon(theme) {
+  const isDark = theme === 'dark';
+  const href = isDark ? '/favicon-dark.svg' : '/favicon-light.svg';
+  
+  const existingLink = document.querySelector("link[rel~='icon']");
+  const newLink = document.createElement('link');
+  newLink.rel = 'icon';
+  newLink.type = 'image/svg+xml';
+  newLink.href = href;
+  
+  if (existingLink) {
+    document.head.removeChild(existingLink);
+  }
+  document.head.appendChild(newLink);
+}
+
+// Apply initial theme & favicon
 document.documentElement.setAttribute('data-theme', state.theme);
+updateFavicon(state.theme);
 
 const app = document.querySelector('#app');
 
@@ -77,10 +98,16 @@ function renderApp() {
             <span>${lofiAudio.isPlaying() ? 'En pause' : 'Ambiance lofi'}</span>
           </button>
           
-          <select class="lofi-track-select" id="lofi-track-select" aria-label="Choix du son lofi">
-            <option value="rain" ${lofiAudio.getTrack() === 'rain' ? 'selected' : ''}>Pluie douce</option>
-            <option value="vinyl" ${lofiAudio.getTrack() === 'vinyl' ? 'selected' : ''}>Vinyle chaud</option>
-          </select>
+          ${renderCustomSelect({
+            id: 'lofi-track-select',
+            value: lofiAudio.getTrack(),
+            options: [
+              { value: 'rain', label: 'Pluie douce', icon: icons.rain },
+              { value: 'vinyl', label: 'Vinyle chaud', icon: icons.vinyl }
+            ],
+            ariaLabel: 'Choix du son lofi',
+            variant: 'compact'
+          })}
         </div>
 
         <!-- Theme Toggle -->
@@ -271,13 +298,18 @@ function renderSettingsPanel() {
               <span class="setting-card-badge">${curFormat.name}</span>
             </div>
             <div class="setting-card-body">
-              <select class="select-custom" id="convert-format-select" aria-label="Format de sortie">
-                ${OUTPUT_FORMATS.map(f => `
-                  <option value="${f.id}" ${f.id === state.converter.targetMime ? 'selected' : ''}>
-                    ${f.name} — ${f.badge}
-                  </option>
-                `).join('')}
-              </select>
+              ${renderCustomSelect({
+                id: 'convert-format-select',
+                value: state.converter.targetMime,
+                options: OUTPUT_FORMATS.map(f => ({
+                  value: f.id,
+                  label: f.name,
+                  badge: f.badge,
+                  badgeClass: f.badgeClass,
+                  description: f.description
+                })),
+                ariaLabel: 'Format de sortie'
+              })}
             </div>
             <div class="setting-card-footer">
               <span class="setting-hint">${curFormat.description}</span>
@@ -326,12 +358,17 @@ function renderSettingsPanel() {
               <span class="setting-card-badge">${getResizeBadgeText()}</span>
             </div>
             <div class="setting-card-body">
-              <select class="select-custom" id="convert-resize-select" aria-label="Redimensionnement">
-                <option value="original" ${state.converter.resizeMode === 'original' ? 'selected' : ''}>Conserver dimensions originales (100%)</option>
-                <option value="scale" ${state.converter.resizeMode === 'scale' ? 'selected' : ''}>Échelle relative (%)</option>
-                <option value="maxWidth" ${state.converter.resizeMode === 'maxWidth' ? 'selected' : ''}>Largeur max (ex: 1920px)</option>
-                <option value="custom" ${state.converter.resizeMode === 'custom' ? 'selected' : ''}>Dimensions personnalisées (L × H)</option>
-              </select>
+              ${renderCustomSelect({
+                id: 'convert-resize-select',
+                value: state.converter.resizeMode,
+                options: [
+                  { value: 'original', label: 'Conserver dimensions', badge: '100%', description: 'Taille source non modifiée (Ratio préservé)' },
+                  { value: 'scale', label: 'Échelle relative (%)', badge: 'Proportionnel', description: 'Redimensionnement proportionnel en pourcentage' },
+                  { value: 'maxWidth', label: 'Largeur max (ex: 1920px)', badge: 'Plafond', description: 'Ajuste la largeur maximale sans agrandir les petites images' },
+                  { value: 'custom', label: 'Dimensions sur-mesure', badge: 'Manuel', description: 'Largeur et hauteur personnalisées en pixels' }
+                ],
+                ariaLabel: 'Mode de redimensionnement'
+              })}
             </div>
             <div class="setting-card-footer">
               ${renderResizeSubControls()}
@@ -675,6 +712,7 @@ function bindEventListeners() {
     state.theme = state.theme === 'light' ? 'dark' : 'light';
     localStorage.setItem('clemverter_theme', state.theme);
     document.documentElement.setAttribute('data-theme', state.theme);
+    updateFavicon(state.theme);
     renderApp();
   });
 
@@ -691,10 +729,6 @@ function bindEventListeners() {
     renderApp();
   });
 
-  // Lofi Track Select
-  document.querySelector('#lofi-track-select')?.addEventListener('change', (e) => {
-    lofiAudio.setTrack(e.target.value);
-  });
 
   // Tabs
   document.querySelector('#tab-convert')?.addEventListener('click', () => {
@@ -753,16 +787,25 @@ function bindEventListeners() {
     }
   });
 
-  // Converter Settings Handlers
-  document.querySelector('#convert-format-select')?.addEventListener('change', (e) => {
-    state.converter.targetMime = e.target.value;
-    const fmt = OUTPUT_FORMATS.find(f => f.id === e.target.value);
-    if (fmt && fmt.defaultQuality) {
-      state.converter.quality = fmt.defaultQuality;
+  // Custom Select Dropdowns Initialization
+  initCustomSelects((selectId, value) => {
+    if (selectId === 'convert-format-select') {
+      state.converter.targetMime = value;
+      const fmt = OUTPUT_FORMATS.find(f => f.id === value);
+      if (fmt && fmt.defaultQuality) {
+        state.converter.quality = fmt.defaultQuality;
+      }
+      renderApp();
+    } else if (selectId === 'convert-resize-select') {
+      state.converter.resizeMode = value;
+      renderApp();
+    } else if (selectId === 'lofi-track-select') {
+      lofiAudio.setTrack(value);
+      renderApp();
     }
-    renderApp();
   });
 
+  // Converter Settings Handlers
   document.querySelector('#convert-quality-slider')?.addEventListener('input', (e) => {
     state.converter.quality = parseInt(e.target.value, 10) / 100;
     const disp = document.querySelector('#quality-val-display');
@@ -771,11 +814,6 @@ function bindEventListeners() {
 
   document.querySelector('#convert-lossless-check')?.addEventListener('change', (e) => {
     state.converter.lossless = e.target.checked;
-  });
-
-  document.querySelector('#convert-resize-select')?.addEventListener('change', (e) => {
-    state.converter.resizeMode = e.target.value;
-    renderApp();
   });
 
   document.querySelector('#convert-scale-slider')?.addEventListener('input', (e) => {
