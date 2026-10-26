@@ -4,8 +4,10 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon-light.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f2faf6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#15141B" media="(prefers-color-scheme: dark)" />
     
-    <!-- Sync theme and favicon with localStorage immediately -->
+    <!-- Sync theme, favicon, and language with localStorage immediately -->
     <script>
       (function() {
         const theme = localStorage.getItem('clemverter_theme') || 'light';
@@ -14,6 +16,11 @@
         if (link) {
           link.href = theme === 'dark' ? '/favicon-dark.svg' : '/favicon-light.svg';
         }
+        const savedLang = localStorage.getItem('clemverter_lang');
+        const lang = (savedLang === 'fr' || savedLang === 'en')
+          ? savedLang
+          : (navigator.language && navigator.language.startsWith('en') ? 'en' : 'fr');
+        document.documentElement.setAttribute('lang', lang);
       })();
     </script>
     

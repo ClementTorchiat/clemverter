@@ -15,10 +15,12 @@ let isGlobalListenerBound = false;
  * @param {Array<{value: string, label: string, badge?: string, badgeClass?: string, description?: string, icon?: string}>} config.options
  * @param {string} [config.ariaLabel]
  * @param {string} [config.variant] - 'default' | 'compact'
+ * @param {string} [config.triggerLabel] - Optional custom label for trigger
  * @returns {string} HTML markup
  */
-export function renderCustomSelect({ id, value, options, ariaLabel, variant = 'default' }) {
+export function renderCustomSelect({ id, value, options, ariaLabel, variant = 'default', triggerLabel = null }) {
   const selectedOption = options.find(o => o.value === value) || options[0] || { value: '', label: '' };
+  const displayLabel = triggerLabel !== null ? triggerLabel : selectedOption.label;
 
   return `
     <div class="custom-select ${variant === 'compact' ? 'is-compact' : ''}" data-custom-select-id="${id}">
@@ -33,8 +35,8 @@ export function renderCustomSelect({ id, value, options, ariaLabel, variant = 'd
       >
         <div class="custom-select-trigger-content">
           ${selectedOption.icon ? `<span class="custom-select-icon">${selectedOption.icon}</span>` : ''}
-          <span class="custom-select-trigger-label">${selectedOption.label}</span>
-          ${selectedOption.badge ? `<span class="custom-select-badge ${selectedOption.badgeClass || ''}">${selectedOption.badge}</span>` : ''}
+          <span class="custom-select-trigger-label">${displayLabel}</span>
+          ${(triggerLabel === null && selectedOption.badge) ? `<span class="custom-select-badge ${selectedOption.badgeClass || ''}">${selectedOption.badge}</span>` : ''}
         </div>
         <span class="custom-select-chevron" aria-hidden="true">${icons.chevronDown}</span>
       </button>

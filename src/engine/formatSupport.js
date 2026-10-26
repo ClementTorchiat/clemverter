@@ -4,6 +4,8 @@
  * Supports writing: WebP (Priority), PNG, JPEG, AVIF, BMP, ICO
  */
 
+import { getActiveLanguage } from '../i18n.js';
+
 // Supported target output formats
 export const OUTPUT_FORMATS = [
   {
@@ -155,11 +157,13 @@ export function detectFormat(file) {
 }
 
 // Human readable file size
-export function formatBytes(bytes, decimals = 1) {
-  if (!bytes || bytes <= 0) return '0 o';
+export function formatBytes(bytes, decimals = 1, lang = null) {
+  const currentLang = lang || getActiveLanguage();
+  const isEn = currentLang === 'en';
+  if (!bytes || bytes <= 0) return isEn ? '0 B' : '0 o';
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['o', 'Ko', 'Mo', 'Go'];
+  const sizes = isEn ? ['B', 'KB', 'MB', 'GB'] : ['o', 'Ko', 'Mo', 'Go'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   const val = parseFloat((bytes / Math.pow(k, i)).toFixed(dm));
   return `${val} ${sizes[i]}`;
